@@ -1,0 +1,26 @@
+Data Availability
+
+Due to the PPMI data use agreement, we are not permitted to share the original RNA-seq data directly in this repository. To reproduce the analyses in this study, users should request access to PPMI and obtain:
+	•	Raw counts for differential expression (DE) analysis
+	•	TPM values for VIPER-based activity inference
+  
+Example Files Included in This Repository
+
+For demonstration purposes, we provide simplified example datasets:
+	•	Prodromal_LRRK2_vs_HealthyControl_TPM_for_VIPER.csv — example input for VIPER analysis
+	•	Prodromal_LRRK2_vs_HealthyControl_expression_data_from_count.csv — example input for DE analysis
+  
+It should be noted, however, we just displayed a few sample visiting events and genes, users should include full visiting events and genes of corresponding subgroup to reproduce the results!
+Subgroups Used in the Manuscript
+
+The full analysis includes the following PPMI subgroups:
+	•	Prodromal_LRRK2
+	•	Sporadic_PD
+	•	PD_LRRK2
+	•	PD_GBA
+	•	Prodromal_GBA
+	•	Prodromal_Hyposmia
+	•	Prodromal_RBD
+	•	SWEDD
+
+human_kinases_uniprot.tsv is human kinases list extracted from UniprotKB.
