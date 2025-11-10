@@ -1,0 +1,176 @@
+```{r}
+library(viper)
+library(dplyr)
+library(tibble)
+library(org.Hs.eg.db)
+library(biomaRt)
+library(dorothea)
+library(limma)
+library(ggplot2)
+```
+
+
+```{r}
+# 1. Load dataset
+# Please revise the subgroup into 'Sporadic_PD', 'PD_LRRK2', 'PD_GBA', 'Prodromal_GBA', 'Prodromal_Hyposmia', 'Prodromal_RBD', 'SWEDD' to get corresponding results for other groups
+subgroup <- "Prodromal_LRRK2"
+df <- read.csv(paste0("../Data/", subgroup, " vs healthy control TPM for VIPER.csv"), sep = ",", header = TRUE)
+
+# Remove metadata columns (event, COHORT, subgroup)
+rownames(df) <- df$event
+expr <- df[, !(names(df) %in% c("event", "COHORT", "subgroup"))]
+
+expr <- as.matrix(expr) 
+```
+
+
+```{r}
+# 2. Convert Ensembl IDs to Gene Symbols (VIPER prefers symbols)
+ensembl_ids <- rownames(expr)
+
+mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
+gene_map <- getBM(
+  filters = "ensembl_gene_id",
+  attributes = c("ensembl_gene_id", "hgnc_symbol"),
+  values = colnames(expr),
+  mart = mart
+)
+
+# Replace column names (Ensembl -> Symbol, keeping only mapped ones)
+mapped_genes <- gene_map$hgnc_symbol
+names(mapped_genes) <- gene_map$ensembl_gene_id
+
+colnames(expr) <- ifelse(colnames(expr) %in% names(mapped_genes),
+                         mapped_genes[colnames(expr)],
+                         colnames(expr))
+
+# Remove empty gene symbols
+expr <- expr[, colnames(expr) != ""]
+```
+
+
+```{r}
+# 3. Load regulon (TF-target relationships)
+data(dorothea_hs, package = "dorothea")
+regulon <- dorothea_hs %>% filter(confidence %in% c("A","B")) %>% dorothea::df2regulon()
+
+```
+
+
+```{r}
+# 4. Run VIPER
+expr_t <- t(expr)
+
+# Infer TF activities
+vpres <- viper(expr_t, regulon, verbose = TRUE)
+```
+
+
+```{r}
+# 5. Compare cohorts
+meta <- df[c("COHORT","subgroup")]
+rownames(meta) <- df$event
+
+group1 <- rownames(meta[meta$subgroup == "Healthy Control", ])
+group2_name <- sub(".*_", "", subgroup)
+group2 <- rownames(meta[meta$subgroup == group2_name, ])
+
+# Compute differential TF activity
+diff_activity <- rowMeans(vpres[, group2]) - rowMeans(vpres[, group1])
+
+# Create results table
+results <- data.frame(
+  TF = rownames(vpres),
+  diff_activity = diff_activity
+) %>% arrange(desc(abs(diff_activity)))
+
+results
+```
+
+
+```{r}
+write.csv(results, file = paste0("../1_results/", subgroup, "_diff_TF_activity.csv"), row.names = FALSE)
+```
+
+```{r}
+# 6. Test statistical significance (per-TF)
+# Create design matrix for group comparison
+group <- factor(ifelse(colnames(vpres) %in% group2, "PD", "Control"))
+design <- model.matrix(~0 + group)
+colnames(design) <- levels(group)
+
+# Fit linear model for each TF activity
+fit <- lmFit(vpres, design)
+contrast.matrix <- makeContrasts(PDvsControl = PD - Control, levels = design)
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit2 <- eBayes(fit2)
+
+# Extract full results table
+tf_stats <- topTable(fit2, number = Inf, adjust.method = "BH") %>%
+  tibble::rownames_to_column("TF") %>%
+  dplyr::rename(
+    logFC = logFC,
+    AveExpr = AveExpr,
+    t = t,
+    P.Value = P.Value,
+    adj.P.Val = adj.P.Val
+  ) %>%
+  dplyr::arrange(adj.P.Val)
+
+# Add back the simple mean difference for reference
+tf_stats <- tf_stats %>%
+  dplyr::mutate(diff_activity = diff_activity[match(TF, rownames(vpres))])
+
+# View top TFs
+head(tf_stats)
+```
+
+
+```{r}
+# Save results
+write.csv(tf_stats, file = paste0("../1_results/", subgroup, "_TF_stats.csv"), row.names = FALSE)
+```
+
+
+```{r}
+# 7. Plot the results
+p <- ggplot(tf_stats %>% head(60),
+            aes(x = reorder(TF, logFC),
+                y = logFC,
+                fill = adj.P.Val < 0.05)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    x = "TF",
+    y = "Activity",
+    title = paste0(subgroup, " vs Healthy Control"),
+    fill = "adj.P.Val < 0.05"
+  ) +
+  scale_fill_manual(
+    values = c("TRUE" = "#E64B35FF", "FALSE" = "#ADD8E6"),
+    labels = c("TRUE" = "Significant", "FALSE" = "Not significant")
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    axis.text.y = element_text(size = 8, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "right",
+    legend.title = element_text(color = "black", size = 10),
+    legend.text = element_text(color = "black", size = 9),
+    plot.margin = margin(10, 20, 10, 40),
+    panel.grid = element_blank(),                       
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),  
+    axis.line = element_line(color = "black") 
+  )
+
+p
+```
+
+
+```{r}
+# Export high-resolution figure
+ggsave(paste0("../1_results/", subgroup, " vs HC TF_activity.png"), plot = p, width = 12, height = 9, dpi = 500)
+```
+
+
+

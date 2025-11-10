@@ -1,0 +1,154 @@
+```{r}
+# 1. Load packages
+library(DESeq2)
+library(EnhancedVolcano)
+library(tidyverse)
+library(biomaRt)
+library(org.Hs.eg.db)
+library(AnnotationDbi)
+library(EnhancedVolcano)
+library(ggplot2)
+```
+
+
+```{r}
+# 2. Load RNA-seq data
+# Please revise the subgroup into 'Sporadic_PD', 'PD_LRRK2', 'PD_GBA', 'Prodromal_GBA', 'Prodromal_Hyposmia', 'Prodromal_RBD', 'SWEDD' to get corresponding results for other groups
+subgroup <- "Prodromal_LRRK2"
+df3 <- read.csv(paste0("../Data/", subgroup, " vs Healthy control_expression_data_from_count.csv"), check.names = FALSE)
+
+# Separate metadata and expression
+meta <- df3[, c("event", "COHORT", "subgroup", "PATNO")]
+expr <- df3[, grep("^ENSG", names(df3))]
+
+rownames(expr) <- df3$event
+rownames(meta) <- df3$event
+```
+
+```{r}
+# 3. Map Ensembl IDs to gene symbols
+# Map Ensembl to HGNC symbol
+gene_symbols <- mapIds(org.Hs.eg.db,
+                       keys = colnames(expr),
+                       column = "SYMBOL",
+                       keytype = "ENSEMBL",
+                       multiVals = "first")
+colnames(expr) <- gene_symbols
+```
+
+```{r}
+# 4. Load your kinase list from UniProt file
+kinase_list_file <- "../Data/human_kinases_uniprot.tsv"
+
+kinase_df <- read.delim(kinase_list_file, header = TRUE, stringsAsFactors = FALSE)
+
+# Extract primary gene symbols
+kinase_list <- unique(kinase_df$Gene.Names..primary.)
+
+# Remove extra spaces
+kinase_list <- trimws(kinase_list)
+
+# Remove empty entries
+kinase_list <- kinase_list[kinase_list != ""]
+
+# Convert to uppercase if your RNA-seq data is uppercase
+kinase_list <- toupper(kinase_list)
+
+# Remove duplicates again
+kinase_list <- unique(kinase_list)
+```
+
+```{r}
+sum(colnames(expr) %in% kinase_list)  # should be >0
+```
+
+
+```{r}
+# Filter expression matrix for kinases
+expr <- expr[, colnames(expr) %in% kinase_list]
+
+# 5. Ensure numeric counts
+expr <- as.data.frame(lapply(expr, function(x) as.numeric(as.character(x))))
+expr[is.na(expr)] <- 0  # replace any NA with 0
+
+# 6. Prepare DESeq2 dataset
+expr_t <- as.data.frame(t(expr)) 
+colnames(expr_t) <- rownames(meta)
+expr_t <- expr_t[, rownames(meta)]
+
+# Convert subgroup to factor
+group_name <- sub(".*_", "", subgroup) 
+meta$subgroup <- factor(meta$subgroup, levels = c("Healthy Control", group_name))
+
+# Create DESeq2 dataset
+dds <- DESeqDataSetFromMatrix(countData = round(expr_t),
+                              colData = meta,
+                              design = ~ subgroup)
+
+# Filter low-count genes
+dds <- dds[rowSums(counts(dds)) > 10, ]
+```
+
+
+```{r}
+# 7. Run DESeq2
+dds <- DESeq(dds)
+res <- results(dds, contrast = c("subgroup", group_name, "Healthy Control"))
+res <- res[order(res$pvalue), ]
+res_df <- as.data.frame(res)
+res_df$gene <- rownames(res_df)
+```
+
+
+```{r}
+# 8. Save DE kinase results
+write.csv(res_df, paste0("../1_results/DE_kinases_", subgroup, "_vs_Control.csv"), row.names = FALSE)
+```
+
+```{r}
+# 9. Volcano plot
+pCutoff <- 0.05
+
+FCcutoff <- 0.75  # Please find the FCcutoff value for each subgroup from the supplementary table S2 in our manscript.
+
+res_df <- res_df %>%
+  mutate(direction = case_when(
+    padj < pCutoff & log2FoldChange > FCcutoff  ~ "Up in PD",
+    padj < pCutoff & log2FoldChange < -FCcutoff ~ "Down in PD",
+    TRUE ~ "Not significant"
+  ))
+
+# EnhancedVolcano plot
+EnhancedVolcano(res_df,
+    lab = res_df$gene,
+    x = 'log2FoldChange',
+    y = 'padj',
+    title = paste0('DE Kinases: ', subgroup, ' vs Healthy Control'),
+    pCutoff = pCutoff,
+    FCcutoff = FCcutoff,
+    pointSize = 2.0,
+    labSize = 3.5,
+    colAlpha = 0.75,
+    xlim = c(-3, 3)
+)
+
+# Assign the plot to a variable
+volcano1 <- EnhancedVolcano(res_df,
+    lab = res_df$gene,
+    x = 'log2FoldChange',
+    y = 'padj',
+    title = paste0('DE Kinases: ', subgroup, ' vs Healthy Control'),
+    pCutoff = pCutoff,
+    FCcutoff = FCcutoff,
+    pointSize = 2.0,
+    labSize = 3.5,
+    colAlpha = 0.75,
+    xlim = c(-3, 3)
+)
+```
+
+
+```{r}
+# Or save to PNG
+ggsave(paste0("../1_results/EnhancedVolcano_DE_kinases (", subgroup, ").png"),plot = volcano1, width = 8, height = 6, dpi = 300)
+```
