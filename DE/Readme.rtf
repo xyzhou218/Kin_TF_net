@@ -1,19 +1,14 @@
-Data Availability
+Differential Expression (DE) Analysis
 
-Due to the PPMI data use agreement, we are not permitted to share the original RNA-seq data directly in this repository. To reproduce the analyses in this study, users should request access to PPMI and obtain:
-	•	Raw counts for differential expression (DE) analysis
-	•	TPM values for VIPER-based activity inference
+To perform DE analysis, users should prepare the required raw count matrices as described in the ../Data directory.
 
-Example Files Included in This Repository
+The script:
+	•	0_kinases_Prodromal_LRRK2_vs_HealthyControl_kinases_DE_analysis.Rmd runs the DE workflow and identifies kinases with altered expression in the Prodromal_LRRK2 vs Healthy Control comparison.
 
-For demonstration purposes, we provide simplified example datasets:
-	•	Prodromal_LRRK2_vs_HealthyControl_TPM_for_VIPER.csv — example input for VIPER analysis
-	•	Prodromal_LRRK2_vs_HealthyControl_expression_data_from_count.csv — example input for DE analysis
+To run the analysis for other subgroups, modify the input file names and subgroup labels accordingly.
+Note on Fold-Change Thresholds: Each subgroup uses a slightly different FCcutoff value. Users can find the exact cutoffs in Supplementary Table S2 of the manuscript.
 
-It should be noted, however, we just displayed a few sample visiting events and genes, users should include full visiting events and genes of corresponding subgroup to reproduce the results!
-Subgroups Used in the Manuscript
-
-The full analysis includes the following PPMI subgroups:
+Subgroups Included in the Manuscript
 	•	Prodromal_LRRK2
 	•	Sporadic_PD
 	•	PD_LRRK2
@@ -23,4 +18,5 @@ The full analysis includes the following PPMI subgroups:
 	•	Prodromal_RBD
 	•	SWEDD
 
-human_kinases_uniprot.tsv is human kinases list extracted from UniprotKB.
+After run, the results will be saved in “./1_results”.
+
