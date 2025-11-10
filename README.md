@@ -20,7 +20,7 @@
 │   └── Readme.rtf
 │           # Notes explaining pipeline steps   
 │
-├── DE
+├── VIPER
 │   ├── 0_Prodromal_LRRK2 vs Healthy control VIPER analysis.rmd
 │   │       # R Markdown script performing VIPER analysis to infer TF activity changes
 │   ├── 1_results
