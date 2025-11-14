@@ -45,6 +45,3 @@ To reproduce the analysis:
 2. Run the `.rmd` files in `DE/` to generate differential expression results
 3. Run the VIPER analysis `.rmd` to infer TF activity changes
 
-If you use scripts in this repository, please cite:
-"Stratified Signaling Network Remodeling of Kinase–Transcription Factors' Interactions in Parkinson's disease", Xiaoyan Zhou, Luca Parisi , Sicen Liu, Ziqi Cheng, Hanwen Liang,
-Mansour Youseffi, Farideh Javid and Renfei Ma*
