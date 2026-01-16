@@ -1,4 +1,4 @@
-# Kin_TF_net
+<img width="468" height="40" alt="image" src="https://github.com/user-attachments/assets/b5e38a3f-65cc-40ec-b774-14a2da90f89b" /># Kin_TF_net
 ## Repository structure and usage
 ```
 .
@@ -9,6 +9,8 @@
 │   │       # TPM-normalized RNA-seq data formatted for VIPER input
 │   ├── Prodromal_LRRK2 vs Healthy control_expression_data_from_count.csv
 │   │       # Raw gene-level count matrix used for differential expression analysis
+│   ├── participants.csv
+│   │       # PPMI participants IDs, along with their corresponding cohort, subgroup and the number of recorded visits.
 │   └── Readme.rtf
 │           # Additional dataset usage notes and preprocessing details
 │
@@ -45,3 +47,5 @@ To reproduce the analysis:
 2. Run the `.rmd` files in `DE/` to generate differential expression results
 3. Run the VIPER analysis `.rmd` to infer TF activity changes
 
+### Citation
+Please cite "Stratified Signaling Network Remodeling of Kinase-Transcription Factors' Interactions in Parkinson's disease. Xiaoyan Zhou, Luca Parisi, Sicen Liu, Ziqi Cheng, Hanwen Liang, Mansour Youseffi, Farideh Javid and Renfei Ma*" if you use any scripts in this repository.
