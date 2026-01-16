@@ -1,4 +1,4 @@
-<img width="468" height="40" alt="image" src="https://github.com/user-attachments/assets/b5e38a3f-65cc-40ec-b774-14a2da90f89b" /># Kin_TF_net
+# Kin_TF_net
 ## Repository structure and usage
 ```
 .
